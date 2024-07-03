@@ -1,52 +1,77 @@
-import boto3 # AWS lambda dependencies 
-import sys 
-import os 
-import config
+import json
+import boto3
+from azure.identity import DefaultAzureCredential
+from azure.mgmt.resource import ResourceManagementClient
+from azure.storage.blob import BlobServiceClient
+"""
+    implementing a service migration that connects AWS lambda functions to Azure services and vice versa
+    including setting up the required permissions, configuring the services, and writing the integration code.
 
-from azure.functions import Function 
-from azure.identity import DefaultAzureCredential 
+    1. AWS and Azure accounts with appropriate permissions
+    2. AWS CLI and Azure CLI installed and configured on your local machine 
 
-# def start_migration(source, destination):
-#     s3 = boto3.resource('s3')
-    
-    
-#     # Get the source and destination bucket objects
-#     source = s3.Bucket(source)
-#     print(source)
-#     pass 
+"""
+
+# lambda function code to interact with azure services 
 def lambda_handler(event, context):
-    # message = event.get("message", "hello from lambda")
-    # configure AWS s3 client
-    s3_client = boto3.client('s3')
-
-    # connect to azure blob storage using azure functions credential
+    # Initialize the Azure credential
     credential = DefaultAzureCredential()
-    from azure.storage.blob import BlobServiceClient
-    blob_service_client = BlobServiceClient()
-    blob_service_client = BlobServiceClient(account_url="your-azure-storage-account-url", credential=credential)
-    blob_client = blob_service_client.get_blob_client(container_name="my-azure-blob-container", blob_name="message.txt")
 
-    # Upload the message to Azure Blob Storage (replace with your actual logic)
-    blob_client.upload_blob(message)
-    print(f"Uploaded message: '{message}' to Azure Blob Storage")
+    # Replace with your Azure subscription ID
+    subscription_id = 'YOUR_AZURE_SUBSCRIPTION_ID'
+
+    # Initialize the Resource Management client
+    resource_client = ResourceManagementClient(credential, subscription_id)
+
+    # Replace with your Azure storage account name and container name
+    storage_account_name = 'YOUR_STORAGE_ACCOUNT_NAME'
+    container_name = 'YOUR_CONTAINER_NAME'
+
+    # Construct the Blob service client URL
+    blob_service_client_url = f"https://{storage_account_name}.blob.core.windows.net"
+
+    # Initialize the Blob Service client
+    blob_service_client = BlobServiceClient(account_url=blob_service_client_url, credential=credential)
+
+    # List blobs in the container
+    container_client = blob_service_client.get_container_client(container_name)
+    blob_list = container_client.list_blobs()
+
+    # Print the blob names
+    for blob in blob_list:
+        print(f"Blob name: {blob.name}")
 
     return {
-         'statusCode': 200,
-         'body': message
-     }
+        'statusCode': 200,
+        'body': json.dumps('Successfully accessed Azure Blob Storage from AWS Lambda')
+    }
 
 
-# Azure Function (triggered by HTTP request)
-def main(req: Function):
-    message = req.params.get('message')
-    # simulate processing the message (replace with your actual logic)
-    processed_message = f"Azure Function received: {message}"
-    # trigger AWS lambda function (repalce with lambda function name)
-    response = lambda_client.invoke(
-        FunctionName = "my-lambda-function-name"
-        payload = json.dumps({"message": processed_message})
+def main():
+    # Initialize AWS client
+    session = boto3.Session(
+        aws_access_key_id='YOUR_AWS_ACCESS_KEY_ID',
+        aws_secret_access_key='YOUR_AWS_SECRET_ACCESS_KEY',
+        region_name='YOUR_AWS_REGION'
+    )
+    s3_client = session.client('s3')
+
+    # Replace with your S3 bucket name
+    bucket_name = 'YOUR_S3_BUCKET_NAME'
+
+    # List objects in the S3 bucket
+    response = s3_client.list_objects_v2(Bucket=bucket_name)
+
+    # Print the object keys
+    for obj in response.get('Contents', []):
+        print(f"Object key: {obj['Key']}")
+
+    return function.HttpResponse(
+        json.dumps('Successfully accessed AWS S3 from Azure Function'),
+        mimetype="application/json"
     )
 
 
 if __name__ == "__main__":
-    main() 
+    main()
+
